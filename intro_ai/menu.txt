@@ -1,0 +1,5 @@
+Pizza - 12
+Burger - 8
+Pasta - 10
+Salad - 6
+Coffee - 3
