@@ -1,14 +1,17 @@
 import os
+from urllib.parse import urlparse
+
 import requests
 
-from dotenv import load_dotenv
+from dotenv import load_dotenv, find_dotenv
 from langchain_openai import ChatOpenAI
 from langchain.agents import create_agent
 
-from langgraph.checkpoint.memory import InMemorySaver
+from langgraph.checkpoint.postgres import PostgresSaver
 
-load_dotenv()
+load_dotenv(override=True)
 
+DB_URI = os.getenv("SUPABASE_DB_URI")
 
 def get_weather(city: str):
     """Get current weather for a given city.
@@ -51,7 +54,7 @@ def get_location():
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 
 llm = ChatOpenAI(
-    model="gpt-5.1",
+    model="gpt-5-mini",
     api_key=OPENAI_API_KEY,
     temperature=0
 )
@@ -67,34 +70,34 @@ When the user asks about their current location or where is he,
 use the get_location tool.
 """
 
+with PostgresSaver.from_conn_string(DB_URI) as checkpointer:
+    checkpointer.setup()
 
-agent = create_agent(
-    model=llm,
-    tools=[get_weather, get_location],
-    system_prompt=system_prompt,
-    checkpointer=InMemorySaver()
-)
-
-while True:
-
-
-    user_input = input("Ask me: ")
-
-    if user_input.lower() in ["exit", "quit","bye"]:
-        print("Bye!")
-        break
-
-
-    response = agent.invoke(
-        {
-            "messages": [
-                {
-                    "role": "user",
-                    "content": user_input
-                }
-            ]
-        },
-        { "configurable": {"thread_id": "1"}}
+    agent = create_agent(
+        model=llm,
+        tools=[get_weather, get_location],
+        system_prompt=system_prompt,
+        checkpointer=checkpointer
     )
 
-    print(response["messages"][-1].content)
+    while True:
+
+        user_input = input("Ask me: ")
+
+        if user_input.lower() in ["exit", "quit", "bye"]:
+            print("Bye!")
+            break
+
+        response = agent.invoke(
+            {
+                "messages": [
+                    {
+                        "role": "user",
+                        "content": user_input
+                    }
+                ]
+            },
+            {"configurable": {"thread_id": "1"}}
+        )
+
+        print(response["messages"][-1].content)

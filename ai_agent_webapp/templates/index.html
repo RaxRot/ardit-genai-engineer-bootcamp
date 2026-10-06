@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <meta
+        name="viewport"
+        content="width=device-width, initial-scale=1.0"
+    >
+
+    <title>Weather AI Agent</title>
+
+    <link
+        rel="stylesheet"
+        href="/static/style.css"
+    >
+
+</head>
+
+<body>
+
+<div class="app">
+
+    <div class="header">
+
+        <div>
+            <h1>Weather AI</h1>
+            <p>AI-powered weather assistant</p>
+        </div>
+
+        <div class="status">
+            ● Online
+        </div>
+
+    </div>
+
+
+    <div
+        id="chat"
+        class="chat"
+    >
+
+        <div class="message ai">
+
+            <div class="bubble">
+
+                👋 Hi! Ask me about the weather.
+
+                <br><br>
+
+                Try:
+
+                <br>
+
+                <b>What's the weather in Madrid?</b>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <div class="input-area">
+
+        <input
+            id="messageInput"
+            type="text"
+            placeholder="Ask about weather..."
+            autocomplete="off"
+        >
+
+        <button id="sendButton">
+            Send
+        </button>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    const chat = document.getElementById("chat")
+
+    const messageInput =
+        document.getElementById("messageInput")
+
+    const sendButton =
+        document.getElementById("sendButton")
+
+
+    // --------------------------------
+    // Persistent conversation ID
+    // --------------------------------
+
+    let threadId =
+        localStorage.getItem("weather_thread_id")
+
+
+    if (!threadId) {
+
+        threadId = crypto.randomUUID()
+
+        localStorage.setItem(
+            "weather_thread_id",
+            threadId
+        )
+    }
+
+
+    // --------------------------------
+    // Add message to UI
+    // --------------------------------
+
+    function addMessage(text, type) {
+
+        const message =
+            document.createElement("div")
+
+        message.className =
+            `message ${type}`
+
+
+        const bubble =
+            document.createElement("div")
+
+        bubble.className = "bubble"
+
+        bubble.textContent = text
+
+
+        message.appendChild(bubble)
+
+        chat.appendChild(message)
+
+
+        chat.scrollTop =
+            chat.scrollHeight
+    }
+
+
+    // --------------------------------
+    // Send message
+    // --------------------------------
+
+    async function sendMessage() {
+
+        const message =
+            messageInput.value.trim()
+
+
+        if (!message) {
+            return
+        }
+
+
+        addMessage(
+            message,
+            "user"
+        )
+
+
+        messageInput.value = ""
+
+
+        sendButton.disabled = true
+
+        sendButton.textContent = "..."
+
+
+        try {
+
+            const response =
+                await fetch(
+                    "/chat",
+                    {
+                        method: "POST",
+
+                        headers: {
+                            "Content-Type":
+                                "application/json"
+                        },
+
+                        body: JSON.stringify({
+                            message: message,
+                            thread_id: threadId
+                        })
+                    }
+                )
+
+
+            const data =
+                await response.json()
+
+
+            addMessage(
+                data.answer,
+                "ai"
+            )
+
+
+        } catch (error) {
+
+            addMessage(
+                "Connection error.",
+                "ai"
+            )
+
+        }
+
+
+        sendButton.disabled = false
+
+        sendButton.textContent = "Send"
+    }
+
+
+    sendButton.addEventListener(
+        "click",
+        sendMessage
+    )
+
+
+    messageInput.addEventListener(
+        "keydown",
+        function(event) {
+
+            if (event.key === "Enter") {
+                sendMessage()
+            }
+
+        }
+    )
+
+</script>
+
+</body>
+
+</html>
